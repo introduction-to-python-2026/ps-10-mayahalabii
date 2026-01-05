@@ -1,53 +1,56 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from skimage.filters import median
-from skimage.morphology import disk # שינוי ל-disk במקום ball
+import numpy as np
 from PIL import Image
-import os
-from google.colab import files # להורדה
+from scipy.signal import convolve2d
+from skimage.filters import median
+from skimage.morphology import ball
 
-# ייבוא הפונקציות שלך
-from image_utils import load_image, edge_detection
+# --- The utility functions (what was requested in image_utils) ---
 
-def main():
-    # שלב 1: טעינת התמונה
-    image_path = "original_image.png" 
-    if not os.path.exists(image_path):
-        print(f"Error: {image_path} not found!")
-        return
-    
-    image = load_image(image_path)
+def load_image(path):
+img = Image.open(path)
+return np.array(img)
 
-    # שלב 2: המרה לשחור לבן וניקוי רעשים
-    # אם התמונה צבעונית (3 ערוצים), נהפוך אותה לדו-מימדית
-    if len(image.shape) == 3:
-        image = np.mean(image, axis=2).astype(np.uint8)
-    
-    # שימוש ב-disk(3) עבור תמונה דו-מימדית
-    clean_image = median(image, disk(3))
+def edge_detection(image):
+# Turning gray
+if len(image.shape) == 3:
+gray_image = np.mean(image, axis=2)
+else:
+gray_image = image
 
-    # שלב 3: זיהוי קצוות
-    edge_mag = edge_detection(clean_image)
+# Edge detection filters
+filter_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
+filter_y = np.array([[-1, -2, -1], [ 0, 0, 0], [ 1, 2, 1]])
 
-    # שלב 4: סף (Thresholding)
-    # שימי לב: לעיתים np.mean נמוך מדי, אבל לטסט זה בדרך כלל בסדר
-    threshold = np.mean(edge_mag)
-    edge_binary = edge_mag > threshold
+# Convolution
+edgeX = convolve2d(gray_image, filter_x, mode='same', boundary='fill', fillvalue=0)
+edgeY = convolve2d(gray_image, filter_y, mode='same', boundary='fill', fillvalue=0)
 
-    # שלב 5: הצגת תוצאה
-    plt.imshow(edge_binary, cmap="gray")
-    plt.title("Edge Detected Image")
-    plt.axis("off")
-    plt.show()
+# Edge strength
+edgeMAG = np.sqrt(edgeX**2 + edgeY**2)
+return edgeMAG
 
-    # שלב 6: שמירה והורדה
-    # חשוב להכפיל ב-255 ולהמיר ל-uint8
-    edge_image = Image.fromarray((edge_binary * 255).astype(np.uint8))
-    output_name = "my_edges.png"
-    edge_image.save(output_name)
-    
-    print(f"Saved {output_name}. Downloading...")
-    files.download(output_name)
+# --- The run itself ---
 
-if __name__ == "__main__":
-    main()
+# Here you link the image! Make sure the name in quotes is the same as the file name you uploaded on the side.
+my_file_name = "my_image.png"
+
+#1. Charging
+original_img = load_image(my_file_name)
+
+#2. Noise Clearing
+clean_img = median(original_img, ball(3))
+
+#3. Edge detection
+edges = edge_detection(clean_img)
+
+#4. Converting to black and white (binary)
+binary_edges = edges > (np.mean(edges) * 1.5)
+
+# 5. Displaying the result
+plt.imshow(binary_edges, cmap='gray')
+plt.show()
+
+# 6. Saving the image to your computer (so you can upload it to GitHub)
+final_result = Image.fromarray((binary_edges * 255).astype(np.uint8))
+final_result.save("edge_result.png")

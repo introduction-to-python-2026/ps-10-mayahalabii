@@ -1,42 +1,28 @@
-import numpy as np
 from PIL import Image
+import numpy as np
 from scipy.signal import convolve2d
 
-def load_image(image_path):
-    """
-    טעינת תמונה והמרה לגרייסקייל. 
-    זה קריטי כדי שפונקציית ה-median בטסט לא תקרוס.
-    """
-    # שימוש ב-convert("L") הופך את התמונה לדו-מימדית (0-255)
-    img = Image.open(image_path).convert("L")
-    return np.array(img)
+def load_image(path):
+# Converts the image to an array and returns it
+img = Image.open(path)
+return np.array(img)
 
 def edge_detection(image):
-    """
-    זיהוי קצוות בעזרת אופרטור Sobel.
-    """
-    # המרה ל-float לצורך חישובים מתמטיים מדויקים
-    gray = image.astype(float)
+# 1. Convert to black and white (average of the three color channels)
+if len(image.shape) == 3:
+gray_image = np.mean(image, axis=2)
+else:
+gray_image = image
 
-    # הגדרת קרנלים של Sobel - אלו הקרנלים המדויקים שהטסט מצפה להם
-    kernelX = np.array([
-        [-1, 0, 1],
-        [-2, 0, 2],
-        [-1, 0, 1]
-    ])
-    
-    kernelY = np.array([
-        [-1, -2, -1],
-        [ 0,  0,  0],
-        [ 1,  2,  1]
-    ])
+#2. Building filters for vertical and horizontal changes
+filter_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
+filter_y = np.array([[-1, -2, -1], [ 0, 0, 0], [ 1, 2, 1]])
 
-    # ביצוע קונבולוציה
-    # mode="same" שומר על גודל התמונה המקורי
-    edgeX = convolve2d(gray, kernelX, mode="same", boundary="fill", fillvalue=0)
-    edgeY = convolve2d(gray, kernelY, mode="same", boundary="fill", fillvalue=0)
+# 3. Running convolution (convolve2d) with the lecturer's address
+edgeX = convolve2d(gray_image, filter_x, mode='same', boundary='fill', fillvalue=0)
+edgeY = convolve2d(gray_image, filter_y, mode='same', boundary='fill', fillvalue=0)
 
-    # חישוב עוצמת הקצוות (Magnitude)
-    edgeMAG = np.sqrt(edgeX**2 + edgeY**2)
+# 4. Calculating the strength of the edges according to the formula they requested
+edgeMAG = np.sqrt(edgeX**2 + edgeY**2)
 
-    return edgeMAG
+return edgeMAG
